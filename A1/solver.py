@@ -456,7 +456,34 @@ if __name__ == "__main__":
     # Test Bidirectional Search
     path_bidirectional_search = bidirectional_search(start_node, goal_node)
     print("Bidirectional Search Path:", path_bidirectional_search)
-    # Similarly test DFS, A*, etc.
-    # path_dfs = dfs(start_node, goal_node)
-    # path_astar = astar(start_node, goal_node)
-    # ...
+
+
+    # Step 1: Generate a random 5x5 maze (0 = open, 1 = blocked)
+np.random.seed(42)  # For reproducibility
+maze = np.random.choice([0, 1], size=(5, 5), p=[0.7, 0.3])  # 70% open, 30% blocked
+
+# Make sure start (0,0) and goal (4,4) are open
+maze[0][0] = 0
+maze[4][4] = 0
+
+print("Generated 5x5 Maze:")
+print(maze)
+
+# Step 2: Convert the maze to a graph using your function
+nodes_dict, start_node, goal_node = parse_maze_to_graph(maze)
+
+# Step 3: Perform BFS, DFS, or A* search to find a path from start_node to goal_node
+if start_node and goal_node:
+    print("\nFinding Path Using BFS:")
+    bfs_path = bfs(start_node, goal_node)
+    print(bfs_path)
+
+    print("\nFinding Path Using DFS:")
+    dfs_path = dfs(start_node, goal_node)
+    print(dfs_path)
+
+    print("\nFinding Path Using A*:")
+    astar_path = astar(start_node, goal_node)
+    print(astar_path)
+else:
+    print("Start or goal is blocked, no path possible.")
