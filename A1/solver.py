@@ -6,6 +6,7 @@ import numpy as np
 
 random.seed(42)
 
+
 ###############################################################################
 #                                Node Class                                   #
 ###############################################################################
@@ -26,8 +27,12 @@ class Node:
          - self includes node in self.neighbors
          - node includes self in node.neighbors (undirected)
         """
-        # TODO: Implement adding a neighbor in an undirected manner
-        pass
+        if node not in self.neighbors:
+
+            self.neighbors.append(node)
+        if self not in node.neighbors:
+
+            node.neighbors.append(self)
 
     def __repr__(self):
         return f"Node({self.value})"
@@ -54,13 +59,20 @@ def parse_maze_to_graph(maze):
     nodes_dict = {}
 
     # 1) Create a Node for each open cell
+    for r in range(rows):
+        for c in range(cols):
+            if maze[r][c] == 0:
+                nodes_dict[(r, c)] = Node((r, c))
+
     # 2) Link each node with valid neighbors in four directions (undirected)
+    for (r, c), node in nodes_dict.items():
+        for nr, nc in [(r-1, c), (r+1, c), (r, c-1), (r, c+1)]:  
+            if (nr, nc) in nodes_dict:
+                node.add_neighbor(nodes_dict[(nr, nc)])
+
     # 3) Identify start_node (if (0,0) is open) and goal_node (if (rows-1, cols-1) is open)
-
-    # TODO: Implement the logic to build nodes and link neighbors
-
-    start_node = None
-    goal_node = None
+    start_node = nodes_dict.get((0, 0))
+    goal_node = nodes_dict.get((rows-1, cols-1)) 
 
     # TODO: Assign start_node and goal_node if they exist in nodes_dict
 
@@ -82,6 +94,29 @@ def bfs(start_node, goal_node):
       3. Also track parent_map to reconstruct the path once goal_node is reached.
     """
     # TODO: Implement BFS
+
+    queue = deque([start_node])
+    visited = set()
+    parent_map = {}
+
+    visited.add(start_node)
+
+
+    while queue:
+        current_node = queue.popleft()
+
+        if current_node == goal_node:
+            path = []
+            while current_node:
+                path.append(current_node.value)
+                current_node = parent_map.get(current_node)
+            return path[::-1]
+
+        for neighbor in current_node.neighbors:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                parent_map[neighbor] = current_node
+                queue.append(neighbor)
     return None
 
 
@@ -100,6 +135,29 @@ def dfs(start_node, goal_node):
       3. Reconstruct path via parent_map if goal_node is found.
     """
     # TODO: Implement DFS
+
+    stack = [start_node]
+    visited = set()    
+    parent_map = {} 
+
+    visited.add(start_node)
+
+    while stack:
+        current_node = stack.pop()
+
+        if current_node == goal_node:
+
+            path = []
+            while current_node:
+                path.append(current_node.value)
+                current_node = parent_map.get(current_node)
+            return path[::-1] 
+
+        for neighbor in current_node.neighbors:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                parent_map[neighbor] = current_node 
+                stack.append(neighbor)
     return None
 
 
@@ -120,6 +178,49 @@ def astar(start_node, goal_node):
       4. Expand the node with the smallest f_score, update neighbors if a better path is found.
     """
     # TODO: Implement A*
+
+    if not start_node or not goal_node:
+        return None
+
+    # Priority queue for A* (min-heap) - stores (f_score, node)
+    open_set = []
+    heapq.heappush(open_set, (0, start_node))
+
+    # Dictionaries for g_score, f_score, and parent mapping
+    g_score = defaultdict(lambda: float('inf'))  # Cost from start_node to each node
+    f_score = defaultdict(lambda: float('inf'))  # Estimated total cost from start_node to goal_node
+    g_score[start_node] = 0
+    f_score[start_node] = manhattan_distance(start_node, goal_node)
+
+    parent_map = {}  # To reconstruct the path
+
+    while open_set:
+        # Expand the node with the smallest f_score
+        current_f, current_node = heapq.heappop(open_set)
+
+        # Check if we reached the goal
+        if current_node == goal_node:
+            # Reconstruct the path
+            path = []
+            while current_node:
+                path.append(current_node.value)
+                current_node = parent_map.get(current_node)
+            return path[::-1]  # Reverse to get path from start to goal
+
+        # Explore neighbors
+        for neighbor in current_node.neighbors:
+            tentative_g_score = g_score[current_node] + 1  # Assume uniform cost for edges
+
+            if tentative_g_score < g_score[neighbor]:
+                # Better path found
+                parent_map[neighbor] = current_node
+                g_score[neighbor] = tentative_g_score
+                f_score[neighbor] = g_score[neighbor] + manhattan_distance(neighbor, goal_node)
+
+                # Add neighbor to the priority queue if not already there
+                heapq.heappush(open_set, (f_score[neighbor], neighbor))
+
+    # If we exhaust the open_set without finding the goal, return None
     return None
 
 def manhattan_distance(node_a, node_b):
@@ -128,6 +229,11 @@ def manhattan_distance(node_a, node_b):
     if they are (row, col) pairs.
     """
     # TODO: Return |r1 - r2| + |c1 - c2|
+
+    r1, c1 = node_a.value
+    r2, c2 = node_b.value
+    return abs(r1 - r2) + abs(c1 - c2)
+
     return 0
 
 
@@ -146,6 +252,55 @@ def bidirectional_search(start_node, goal_node):
       3. If the frontiers intersect, reconstruct the path by combining partial paths.
     """
     # TODO: Implement bidirectional search
+
+    def bidirectional_search(start_node, goal_node):
+    """
+    Bidirectional search on an undirected graph of Node objects.
+    Returns list of (row, col) from start to goal, or None if not found.
+
+    Steps (suggested):
+      1. Maintain two frontiers (queues), one from start_node, one from goal_node.
+      2. Alternate expansions between these two queues.
+      3. If the frontiers intersect, reconstruct the path by combining partial paths.
+    """
+    if not start_node or not goal_node:
+        return None
+
+    # Initialize frontiers (queues), visited sets, and parent maps for both directions
+    start_frontier = deque([start_node])
+    goal_frontier = deque([goal_node])
+
+    start_visited = {start_node}
+    goal_visited = {goal_node}
+
+    start_parent = {start_node: None}
+    goal_parent = {goal_node: None}
+
+    while start_frontier and goal_frontier:
+        # Expand from the start frontier
+        current_start = start_frontier.popleft()
+        for neighbor in current_start.neighbors:
+            if neighbor not in start_visited:
+                start_visited.add(neighbor)
+                start_parent[neighbor] = current_start
+                start_frontier.append(neighbor)
+
+                # Check for intersection
+                if neighbor in goal_visited:
+                    return reconstruct_bidirectional_path(neighbor, start_parent, goal_parent)
+
+        # Expand from the goal frontier
+        current_goal = goal_frontier.popleft()
+        for neighbor in current_goal.neighbors:
+            if neighbor not in goal_visited:
+                goal_visited.add(neighbor)
+                goal_parent[neighbor] = current_goal
+                goal_frontier.append(neighbor)
+
+                # Check for intersection
+                if neighbor in start_visited:
+                    return reconstruct_bidirectional_path(neighbor, start_parent, goal_parent)
+
     return None
 
 
