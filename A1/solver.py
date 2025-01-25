@@ -340,10 +340,15 @@ def simulated_annealing(start_node, goal_node, temperature=1.0, cooling_rate=0.9
     """
     # TODO: Implement simulated annealing
 
+def simulated_annealing(start_node, goal_node, temperature=1.0, cooling_rate=0.99, min_temperature=0.01):
     current_node = start_node
     path = [current_node.value]
-    
+
     while temperature > min_temperature:
+        # If we've reached the goal, stop
+        if current_node == goal_node:
+            return path
+        
         # Get neighbors
         neighbors = current_node.neighbors
         if not neighbors:
@@ -352,7 +357,7 @@ def simulated_annealing(start_node, goal_node, temperature=1.0, cooling_rate=0.9
         # Randomly choose a neighbor
         next_node = random.choice(neighbors)
 
-        # Calculate the 'cost' of moving to the next node
+        # Calculate the 'cost' of moving to the next node (Manhattan distance)
         current_cost = manhattan_distance(current_node, goal_node)
         next_cost = manhattan_distance(next_node, goal_node)
 
@@ -361,10 +366,8 @@ def simulated_annealing(start_node, goal_node, temperature=1.0, cooling_rate=0.9
             current_node = next_node
             path.append(current_node.value)
 
-        # Cool down
+        # Cool down the temperature
         temperature *= cooling_rate
-
-    return path if current_node == goal_node else None
 
 
 ###############################################################################
