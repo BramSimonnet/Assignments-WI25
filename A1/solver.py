@@ -6,7 +6,6 @@ import numpy as np
 
 random.seed(42)
 
-
 ###############################################################################
 #                                Node Class                                   #
 ###############################################################################
@@ -27,9 +26,12 @@ class Node:
          - self includes node in self.neighbors
          - node includes self in node.neighbors (undirected)
         """
+        # TODO: Implement adding a neighbor in an undirected manner
+
         if node not in self.neighbors:
 
             self.neighbors.append(node)
+
         if self not in node.neighbors:
 
             node.neighbors.append(self)
@@ -58,7 +60,6 @@ def parse_maze_to_graph(maze):
     rows, cols = maze.shape
     nodes_dict = {}
 
-    # 1) Create a Node for each open cell
     for r in range(rows):
         for c in range(cols):
             if maze[r][c] == 0:
@@ -77,6 +78,8 @@ def parse_maze_to_graph(maze):
     # TODO: Assign start_node and goal_node if they exist in nodes_dict
 
     return nodes_dict, start_node, goal_node
+
+    # TODO: Implement the logic to build nodes and link neighbors
 
 
 ###############################################################################
@@ -117,6 +120,7 @@ def bfs(start_node, goal_node):
                 visited.add(neighbor)
                 parent_map[neighbor] = current_node
                 queue.append(neighbor)
+
     return None
 
 
@@ -135,7 +139,6 @@ def dfs(start_node, goal_node):
       3. Reconstruct path via parent_map if goal_node is found.
     """
     # TODO: Implement DFS
-
     stack = [start_node]
     visited = set()    
     parent_map = {} 
@@ -158,6 +161,7 @@ def dfs(start_node, goal_node):
                 visited.add(neighbor)
                 parent_map[neighbor] = current_node 
                 stack.append(neighbor)
+
     return None
 
 
@@ -221,6 +225,7 @@ def astar(start_node, goal_node):
                 heapq.heappush(open_set, (f_score[neighbor], neighbor))
 
     # If we exhaust the open_set without finding the goal, return None
+
     return None
 
 def manhattan_distance(node_a, node_b):
@@ -234,26 +239,14 @@ def manhattan_distance(node_a, node_b):
     r2, c2 = node_b.value
     return abs(r1 - r2) + abs(c1 - c2)
 
-    return 0
-
 
 ###############################################################################
 #                 Bidirectional Search (Graph-based)                          #
 ###############################################################################
 
+from collections import deque
+
 def bidirectional_search(start_node, goal_node):
-    """
-    Bidirectional search on an undirected graph of Node objects.
-    Returns list of (row, col) from start to goal, or None if not found.
-
-    Steps (suggested):
-      1. Maintain two frontiers (queues), one from start_node, one from goal_node.
-      2. Alternate expansions between these two queues.
-      3. If the frontiers intersect, reconstruct the path by combining partial paths.
-    """
-    # TODO: Implement bidirectional search
-
-    def bidirectional_search(start_node, goal_node):
     """
     Bidirectional search on an undirected graph of Node objects.
     Returns list of (row, col) from start to goal, or None if not found.
@@ -266,42 +259,66 @@ def bidirectional_search(start_node, goal_node):
     if not start_node or not goal_node:
         return None
 
-    # Initialize frontiers (queues), visited sets, and parent maps for both directions
-    start_frontier = deque([start_node])
-    goal_frontier = deque([goal_node])
+    # Two queues and visited sets for forward and backward search
+    forward_queue = deque([start_node])
+    backward_queue = deque([goal_node])
+    forward_visited = {start_node: None}
+    backward_visited = {goal_node: None}
 
-    start_visited = {start_node}
-    goal_visited = {goal_node}
+    while forward_queue and backward_queue:
+        # Expand from start side
+        if expand(forward_queue, forward_visited, backward_visited):
+            return reconstruct_bidirectional_path(forward_visited, backward_visited)
 
-    start_parent = {start_node: None}
-    goal_parent = {goal_node: None}
-
-    while start_frontier and goal_frontier:
-        # Expand from the start frontier
-        current_start = start_frontier.popleft()
-        for neighbor in current_start.neighbors:
-            if neighbor not in start_visited:
-                start_visited.add(neighbor)
-                start_parent[neighbor] = current_start
-                start_frontier.append(neighbor)
-
-                # Check for intersection
-                if neighbor in goal_visited:
-                    return reconstruct_bidirectional_path(neighbor, start_parent, goal_parent)
-
-        # Expand from the goal frontier
-        current_goal = goal_frontier.popleft()
-        for neighbor in current_goal.neighbors:
-            if neighbor not in goal_visited:
-                goal_visited.add(neighbor)
-                goal_parent[neighbor] = current_goal
-                goal_frontier.append(neighbor)
-
-                # Check for intersection
-                if neighbor in start_visited:
-                    return reconstruct_bidirectional_path(neighbor, start_parent, goal_parent)
+        # Expand from goal side
+        if expand(backward_queue, backward_visited, forward_visited):
+            return reconstruct_bidirectional_path(forward_visited, backward_visited)
 
     return None
+
+def expand(frontier, visited, other_visited):
+    """
+    Expands a frontier and checks if a meeting node is found.
+    """
+    if not frontier:
+        return False
+
+    current = frontier.popleft()
+
+    for neighbor in current.neighbors:
+        if neighbor not in visited:
+            visited[neighbor] = current  # Track parent
+            frontier.append(neighbor)
+
+        # Check if the neighbor is in the other visited set (i.e., frontiers meet)
+        if neighbor in other_visited:
+            return True  # Frontiers meet
+
+    return False
+
+def reconstruct_bidirectional_path(forward_visited, backward_visited):
+    """
+    Reconstruct the path when the frontiers meet.
+    """
+    # Find the meeting point
+    meeting_node = next(node for node in forward_visited if node in backward_visited)
+
+    # Reconstruct forward path
+    path = []
+    current = meeting_node
+    while current:
+        path.append(current.value)  # Assuming nodes have a `value` attribute (like (row, col))
+        current = forward_visited[current]
+    path.reverse()
+
+    # Reconstruct backward path
+    current = backward_visited[meeting_node]
+    while current:
+        path.append(current.value)
+        current = backward_visited[current]
+
+    return path
+
 
 
 ###############################################################################
@@ -322,7 +339,32 @@ def simulated_annealing(start_node, goal_node, temperature=1.0, cooling_rate=0.9
       4. Decrease temperature each step by cooling_rate until below min_temperature or we reach goal_node.
     """
     # TODO: Implement simulated annealing
-    return None
+
+    current_node = start_node
+    path = [current_node.value]
+    
+    while temperature > min_temperature:
+        # Get neighbors
+        neighbors = current_node.neighbors
+        if not neighbors:
+            break
+
+        # Randomly choose a neighbor
+        next_node = random.choice(neighbors)
+
+        # Calculate the 'cost' of moving to the next node
+        current_cost = manhattan_distance(current_node, goal_node)
+        next_cost = manhattan_distance(next_node, goal_node)
+
+        # Accept the move with probability depending on the temperature
+        if next_cost < current_cost or random.random() < math.exp((current_cost - next_cost) / temperature):
+            current_node = next_node
+            path.append(current_node.value)
+
+        # Cool down
+        temperature *= cooling_rate
+
+    return path if current_node == goal_node else None
 
 
 ###############################################################################
@@ -341,7 +383,36 @@ def reconstruct_path(end_node, parent_map):
       2. Collect node.value, reverse the list, return it.
     """
     # TODO: Implement path reconstruction
+
+    path = []
+    current_node = end_node
+
+    while current_node is not None:
+        path.append(current_node.value)
+        current_node = parent_map.get(current_node)
+
+    return path[::-1]
     return None
+
+def parse_maze_to_graph(maze):
+    rows, cols = maze.shape
+    nodes_dict = {}
+
+    for r in range(rows):
+        for c in range(cols):
+            if maze[r][c] == 0:
+                nodes_dict[(r, c)] = Node((r, c))
+
+    for (r, c), node in nodes_dict.items():
+        for nr, nc in [(r-1, c), (r+1, c), (r, c-1), (r, c+1)]:
+            if (nr, nc) in nodes_dict:
+                node.add_neighbor(nodes_dict[(nr, nc)])
+
+    start_node = nodes_dict.get((0, 0))
+    goal_node = nodes_dict.get((rows-1, cols-1))
+
+    return nodes_dict, start_node, goal_node
+
 
 
 ###############################################################################
@@ -370,6 +441,21 @@ if __name__ == "__main__":
     path_bfs = bfs(start_node, goal_node)
     print("BFS Path:", path_bfs)
 
+    # Test DFS
+    path_dfs = dfs(start_node, goal_node)
+    print("DFS Path:", path_dfs)
+
+    # Test A*
+    path_astar = astar(start_node, goal_node)
+    print("A* Path:", path_astar)
+
+    # Test Sim Annealing
+    path_simulated_annealing = simulated_annealing(start_node, goal_node)
+    print("Simulated Annealing Path:", path_simulated_annealing)
+
+    # Test Bidirectional Search
+    path_bidirectional_search = bidirectional_search(start_node, goal_node)
+    print("Bidirectional Search Path:", path_bidirectional_search)
     # Similarly test DFS, A*, etc.
     # path_dfs = dfs(start_node, goal_node)
     # path_astar = astar(start_node, goal_node)
