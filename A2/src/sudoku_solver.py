@@ -40,7 +40,12 @@ def find_empty_cell(board):
         - If there are no empty cells, returns None.
     """
     # TODO: implement
-    pass
+    for row in range(9):
+        for col in range(9):
+            if board[row][col] == 0:
+                return (row, col)  # Return the position of the empty cell
+    return None  # No empty cells
+
 
 
 def is_valid(board, row, col, num):
@@ -60,7 +65,22 @@ def is_valid(board, row, col, num):
     bool: True if valid, False otherwise.
     """
     # TODO: implement
-    pass
+    if num in board[row]:
+        return False
+    
+    # Check the column
+    for r in range(9):
+        if board[r][col] == num:
+            return False
+
+    # Check the 3x3 sub-grid
+    start_row, start_col = 3 * (row // 3), 3 * (col // 3)
+    for r in range(start_row, start_row + 3):
+        for c in range(start_col, start_col + 3):
+            if board[r][c] == num:
+                return False
+    
+    return True
 
 
 def solve_sudoku(board):
@@ -76,7 +96,21 @@ def solve_sudoku(board):
         - False if the puzzle is unsolvable.
     """
     # TODO: implement
-    pass
+    empty_cell = find_empty_cell(board)
+    if not empty_cell:
+        return True  # Solved
+
+    row, col = empty_cell
+
+    # Try all numbers from 1 to 9
+    for num in range(1, 10):
+        if is_valid(board, row, col, num):
+            board[row][col] = num  # Try placing num
+            if solve_sudoku(board):  # Recursively try to solve the board
+                return True
+            board[row][col] = 0  # Backtrack if no solution is found
+
+    return False  # No solution found
 
 
 def is_solved_correctly(board):
@@ -93,7 +127,24 @@ def is_solved_correctly(board):
     bool: True if the board is correctly solved, False otherwise.
     """
     # TODO: implement
-    pass
+    for row in board:
+        if sorted(row) != [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+            return False
+    
+    # Check columns
+    for col in range(9):
+        column = [board[row][col] for row in range(9)]
+        if sorted(column) != [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+            return False
+    
+    # Check 3x3 subgrids
+    for row in range(0, 9, 3):
+        for col in range(0, 9, 3):
+            subgrid = [board[r][c] for r in range(row, row + 3) for c in range(col, col + 3)]
+            if sorted(subgrid) != [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+                return False
+    
+    return True
 
 
 if __name__ == "__main__":
@@ -112,4 +163,9 @@ if __name__ == "__main__":
 
     print("Debug: Original board:\n")
     print_board(example_board)
-    # TODO: Students can call their solve_sudoku here once implemented and check if they got a correct solution.
+  
+    if solve_sudoku(example_board):
+        print("\nSudoku Solved!\n")
+        print_board(example_board)
+    else:
+        print("\nNo solution exists.")
