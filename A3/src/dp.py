@@ -62,7 +62,26 @@ class DynamicProgramming:
             None
         """
         # TODO: Implement policy evaluation using iterative updates
-        pass
+
+        for _ in range(self.max_iterations):
+            delta = 0  # Track changes in value function
+            new_value_function = self.value_function.copy()  # Copy of the value function for updates
+
+            for state in self.all_states:
+                action = self.policy[state]  # Get the action from the current policy
+                value = 0  # Initialize value update
+
+                for prob, next_state, reward, done in self.env.get_transitions(state, action):
+                    value += prob * (reward + self.gamma * self.value_function[next_state] * (not done))
+                
+                delta = max(delta, abs(value - self.value_function[state]))  # Track the max change
+                new_value_function[state] = value  # Update value function
+
+            self.value_function = new_value_function  # Update value function after sweep
+
+            if delta < self.theta:  # Stop if value function has converged
+                break
+
     
     def policy_improvement(self):
         """
@@ -72,7 +91,29 @@ class DynamicProgramming:
             bool: True if the policy is stable (no changes), False otherwise.
         """
         # TODO: Implement policy improvement by choosing the best action
-        pass
+    
+        policy_stable = True  # Track if policy changes
+
+        for state in self.all_states:
+            old_action = self.policy[state]  # Store the current action
+            
+            # Find the best action by maximizing the expected value
+            action_values = {}
+            for action in range(self.env.n_actions):
+                action_value = 0
+                for prob, next_state, reward, done in self.env.get_transitions(state, action):
+                    action_value += prob * (reward + self.gamma * self.value_function[next_state] * (not done))
+                action_values[action] = action_value
+
+            best_action = max(action_values, key=action_values.get)  # Choose the action with the highest value
+
+            # Update policy if the best action is different from the old one
+            if old_action != best_action:
+                policy_stable = False
+                self.policy[state] = best_action
+
+        return policy_stable  # Return whether the policy remained unchanged
+
     
     def policy_iteration(self):
         """
@@ -85,7 +126,12 @@ class DynamicProgramming:
             None
         """
         # TODO: Implement Policy Iteration
-        pass
+        while True:
+            self.policy_evaluation()  # Step 1: Evaluate the current policy
+            policy_stable = self.policy_improvement()  # Step 2: Improve the policy
+
+            if policy_stable:
+                break  # Stop if policy remains unchanged
     
     def value_iteration(self):
         """
@@ -97,7 +143,38 @@ class DynamicProgramming:
             None
         """
         # TODO: Implement Value Iteration
-        pass
+        for _ in range(self.max_iterations):
+            delta = 0  # Track the maximum change in value function
+            new_value_function = self.value_function.copy()
+
+            for state in self.all_states:
+                action_values = []
+                for action in range(self.env.n_actions):
+                    action_value = 0
+                    for prob, next_state, reward, done in self.env.get_transitions(state, action):
+                        action_value += prob * (reward + self.gamma * self.value_function[next_state] * (not done))
+                    action_values.append(action_value)
+
+                best_value = max(action_values)  # Find the best action value
+                delta = max(delta, abs(best_value - self.value_function[state]))  # Track the max update
+                new_value_function[state] = best_value  # Update value function
+
+            self.value_function = new_value_function  # Apply updates to the value function
+
+            if delta < self.theta:  # Stop if the value function has converged
+                break
+
+        # Extract the optimal policy after convergence
+        for state in self.all_states:
+            action_values = {}
+            for action in range(self.env.n_actions):
+                action_value = 0
+                for prob, next_state, reward, done in self.env.get_transitions(state, action):
+                    action_value += prob * (reward + self.gamma * self.value_function[next_state] * (not done))
+                action_values[action] = action_value
+            
+            self.policy[state] = max(action_values, key=action_values.get)  # Select best action
+
     
     def _simulate_action(self, state, action):
         """
