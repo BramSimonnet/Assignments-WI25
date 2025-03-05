@@ -1,3 +1,5 @@
+# some assistance from chat gpt
+
 import math
 import random
 import numpy as np
@@ -32,7 +34,9 @@ def drop_piece(board, row, col, piece):
     None. The 'board' is modified in-place. Do NOT return a new board!
     """
     # TODO: implement
-    board[row, col] = piece
+    if row is not None: 
+
+        board[row, col] = piece
 
 
 def is_valid_location(board, col):
@@ -47,7 +51,8 @@ def is_valid_location(board, col):
     bool: True if it's valid to drop a piece in this column, False otherwise.
     """
     # TODO: implement
-    return board[0, col] == 0
+    #return board[0, col] == 0
+    return np.any(board[:, col] == 0)
 
 
 def get_next_open_row(board, col):
@@ -62,12 +67,13 @@ def get_next_open_row(board, col):
     int: The row index of the lowest empty cell in this column.
     """
     # TODO: implement
-    for row in range(ROW_COUNT-1, -1, -1):  # Start from the last row, move up
+    for row in range(ROW_COUNT):
 
-        if board[row, col] == 0:  # Check if the spot is empty
-            
-            return row  # Found the first open row
-    return None
+        if board[row, col] == 0:
+
+            return row
+        
+    return None 
 
 
 def winning_move(board, piece):
@@ -83,6 +89,8 @@ def winning_move(board, piece):
     This requires checking horizontally, vertically, and diagonally.
     """
     # TODO: implement
+    ROW_COUNT, COLUMN_COUNT = board.shape
+
     for row in range(ROW_COUNT):
 
         for col in range(COLUMN_COUNT - 3):
@@ -107,7 +115,7 @@ def winning_move(board, piece):
 
                 return True  # \ diagonal win
             
-    for row in range(ROW_COUNT - 3):
+    for row in range(3, ROW_COUNT):
             
         for col in range(COLUMN_COUNT - 3):
 
@@ -128,11 +136,7 @@ def get_valid_locations(board):
     list of int: The list of column indices that are not full.
     """
     # TODO: implement
-    valid_locations = []
-    for col in range(COLUMN_COUNT):
-        if board[0, col] == 0:  # If the top row of the column is empty
-            valid_locations.append(col)
-    return valid_locations
+    return [col for col in range(COLUMN_COUNT) if is_valid_location(board, col)]
 
 
 def is_terminal_node(board):
@@ -148,13 +152,8 @@ def is_terminal_node(board):
     bool: True if the game is over, False otherwise.
     """
     # TODO: implement
-    # Check if either player has won
-    if winning_move(board, 1) or winning_move(board, 2):
-        return True
-    # Check if there are no valid locations left
-    if len(get_valid_locations(board)) == 0:
-        return True
-    return False
+    return winning_move(board, 1) or winning_move(board, 2) or len(get_valid_locations(board)) == 0
+
 
 
 
@@ -198,48 +197,50 @@ def minimax(board, depth, alpha, beta, maximizingPlayer):
           column: The chosen column index (None if no moves).
           score: The heuristic score of the board state.
     """
-    # TODO: implement
     valid_locations = get_valid_locations(board)
-    
-    # Base case: If we've reached the depth limit or the game is over
-    if depth == 0 or is_terminal_node(board):
-        return None, score_position(board, 1)  # Use the score for Player 1's evaluation
-    
+    is_terminal = is_terminal_node(board)
+
+    if depth == 0 or is_terminal:
+        if is_terminal:
+            if winning_move(board, 1):
+                return (None, math.inf) 
+            elif winning_move(board, 2):
+                return (None, -math.inf) 
+            else:
+                return (None, 0) 
+        return (None, score_position(board, 1))
+
     if maximizingPlayer:
-        # Maximizing Player (Player 1) wants to maximize the score
-        best_score = -float('inf')  # Start with a very low score
-        best_col = valid_locations[0]  # Initialize best column
-
+        value = -math.inf
+        best_col = random.choice(valid_locations)
         for col in valid_locations:
             row = get_next_open_row(board, col)
             temp_board = board.copy()
-            drop_piece(temp_board, row, col, 1)  # Player 1 drops the piece
-
-            # Recursively call minimax for the next move
-            _, score = minimax(temp_board, depth - 1, False)
-            if score > best_score:
-                best_score = score
+            drop_piece(temp_board, row, col, 1)
+            new_score = minimax(temp_board, depth-1, alpha, beta, False)[1]
+            if new_score > value:
+                value = new_score
                 best_col = col
+            alpha = max(alpha, value)
+            if alpha >= beta:
+                break
+        return best_col, value
 
-        return best_col, best_score
-
-    else:
-        # Minimizing Player (Player 2) wants to minimize the score
-        best_score = float('inf')  # Start with a very high score
-        best_col = valid_locations[0]  # Initialize best column
-
+    else:  # minimising player
+        value = math.inf
+        best_col = random.choice(valid_locations)
         for col in valid_locations:
             row = get_next_open_row(board, col)
             temp_board = board.copy()
-            drop_piece(temp_board, row, col, 2)  # Player 2 drops the piece
-
-            # Recursively call minimax for the next move
-            _, score = minimax(temp_board, depth - 1, True)
-            if score < best_score:
-                best_score = score
+            drop_piece(temp_board, row, col, 2)
+            new_score = minimax(temp_board, depth-1, alpha, beta, True)[1]
+            if new_score < value:
+                value = new_score
                 best_col = col
-
-        return best_col, best_score
+            beta = min(beta, value)
+            if alpha >= beta:
+                break
+        return best_col, value
 
 
 
@@ -259,4 +260,27 @@ if __name__ == "__main__":
 
     col, score = minimax(example_board, depth=4, alpha=-math.inf, beta=math.inf, maximizingPlayer=True)
     print("Chosen column:", col, "Score:", score)
-    
+
+
+if __name__ == "__main__":
+    board = create_board()
+    print("Initial Board:")
+    print_board(board)
+
+    test_moves = [(0, 3, 1), (1, 3, 1), (2, 3, 1), (3, 3, 1)] 
+
+    for move in test_moves:
+        row = get_next_open_row(board, move[1])
+        if row is not None:
+            drop_piece(board, row, move[1], move[2])
+
+    print("\nBoard after test moves:")
+    print_board(board)
+
+    if winning_move(board, 1):
+        print("\nPlayer 1 has won!")
+
+    # If minimax is implemented, test it
+    # col, score = minimax(board, depth=4, alpha=-math.inf, beta=math.inf, maximizingPlayer=True)
+    # print("\nMinimax chosen column:", col, "Score:", score)
+

@@ -1,3 +1,5 @@
+# some assistance from chat gpt
+
 def print_board(board):
     """
     Prints the Sudoku board in a grid format.
@@ -41,10 +43,14 @@ def find_empty_cell(board):
     """
     # TODO: implement
     for row in range(9):
+
         for col in range(9):
+
             if board[row][col] == 0:
-                return (row, col)  # Return the position of the empty cell
-    return None  # No empty cells
+
+                return (row, col) 
+            
+    return None 
 
 
 
@@ -68,16 +74,21 @@ def is_valid(board, row, col, num):
     if num in board[row]:
         return False
     
-    # Check the column
     for r in range(9):
+
         if board[r][col] == num:
+
             return False
 
-    # Check the 3x3 sub-grid
-    start_row, start_col = 3 * (row // 3), 3 * (col // 3)
+    start_row = 3 * (row // 3)
+    start_col = 3 * (col // 3)
+
     for r in range(start_row, start_row + 3):
+
         for c in range(start_col, start_col + 3):
+
             if board[r][c] == num:
+
                 return False
     
     return True
@@ -96,21 +107,25 @@ def solve_sudoku(board):
         - False if the puzzle is unsolvable.
     """
     # TODO: implement
-    empty_cell = find_empty_cell(board)
-    if not empty_cell:
-        return True  # Solved
+    emptycell = find_empty_cell(board)
 
-    row, col = empty_cell
+    if not emptycell:
+        return True 
 
-    # Try all numbers from 1 to 9
+    row, col = emptycell
+
     for num in range(1, 10):
-        if is_valid(board, row, col, num):
-            board[row][col] = num  # Try placing num
-            if solve_sudoku(board):  # Recursively try to solve the board
-                return True
-            board[row][col] = 0  # Backtrack if no solution is found
 
-    return False  # No solution found
+        if is_valid(board, row, col, num):
+            board[row][col] = num 
+
+            if solve_sudoku(board):
+
+                return True
+            
+            board[row][col] = 0
+
+    return False # no solution found
 
 
 def is_solved_correctly(board):
@@ -128,16 +143,14 @@ def is_solved_correctly(board):
     """
     # TODO: implement
     for row in board:
-        if sorted(row) != [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+        if sorted(row) != list(range(1, 10)):
             return False
-    
-    # Check columns
+
     for col in range(9):
         column = [board[row][col] for row in range(9)]
-        if sorted(column) != [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+        if sorted(column) != list(range(1, 10)):
             return False
     
-    # Check 3x3 subgrids
     for row in range(0, 9, 3):
         for col in range(0, 9, 3):
             subgrid = [board[r][c] for r in range(row, row + 3) for c in range(col, col + 3)]
@@ -149,23 +162,24 @@ def is_solved_correctly(board):
 
 if __name__ == "__main__":
     # Example usage / debugging:
-    example_board = [
-        [7, 8, 0, 4, 0, 0, 1, 2, 0],
-        [6, 0, 0, 0, 7, 5, 0, 0, 9],
-        [0, 0, 0, 6, 0, 1, 0, 7, 8],
-        [0, 0, 7, 0, 4, 0, 2, 6, 0],
-        [0, 0, 1, 0, 5, 0, 9, 3, 0],
-        [9, 0, 4, 0, 6, 0, 0, 0, 5],
-        [0, 7, 0, 3, 0, 0, 0, 1, 2],
-        [1, 2, 0, 0, 0, 7, 4, 0, 0],
-        [0, 4, 9, 2, 0, 6, 0, 0, 7],
-    ]
+    unsolvable_board = [
+            [5, 3, 5, 0, 7, 0, 0, 0, 0],
+            [6, 0, 0, 1, 9, 5, 0, 0, 0],
+            [0, 9, 8, 0, 0, 0, 0, 6, 0],
+            [8, 0, 0, 0, 6, 0, 0, 0, 3],
+            [4, 0, 0, 8, 0, 3, 0, 0, 1],
+            [7, 0, 0, 0, 2, 0, 0, 0, 6],
+            [0, 6, 0, 0, 0, 0, 2, 8, 0],
+            [0, 0, 0, 4, 1, 9, 0, 0, 5],
+            [0, 0, 0, 0, 8, 0, 0, 7, 9]
+        ]
+
 
     print("Debug: Original board:\n")
-    print_board(example_board)
+    print_board(unsolvable_board)
   
-    if solve_sudoku(example_board):
+    if solve_sudoku(unsolvable_board):
         print("\nSudoku Solved!\n")
-        print_board(example_board)
+        print_board(unsolvable_board)
     else:
         print("\nNo solution exists.")
